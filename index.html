@@ -78,7 +78,7 @@ html, body {
   <div id="name">彼</div>
   <div id="text"></div>
   <div id="input-area">
-    <input type="text" id="player-input" placeholder="メッセージを入力...">
+    <input type="text" id="player-input" placeholder="メッセージを送る...">
     <button id="send-btn" onclick="handleSend()">送信</button>
   </div>
   <div id="limit-info">残り: <span id="remaining-count">-</span>回</div>
@@ -89,10 +89,8 @@ html, body {
 </div>
 
 <script>
-// --------------------------------------------------
-// 設定: ここにAPIキーを入力してください
+// --- 重要: APIキーをここに入れてね ---
 const API_KEY = "AIzaSyA9eJsLfTq3ujjdvq-Xxc7dK2D9ZGdNBOw"; 
-// --------------------------------------------------
 
 const CHAT_LIMIT = 15;
 const face = {
@@ -133,12 +131,12 @@ async function askAI(message) {
     return;
   }
 
-  // URLとモデル指定を最新の確実なものに修正
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+  // モデル名を gemini-1.5-flash-latest に変更（これが一番確実）
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
   
   const prompt = `あなたは親しい「彼」というキャラクターです。好感度は${relationship}です。
-短く1〜2文で答え、末尾に必ず {face:表情名} を付けて。
-表情名: [smile, default, sweat, angry, confuse, heart, think]`;
+1〜2文で短く答え、末尾に必ず {face:表情名} を付けて。
+表情名リスト: [smile, default, sweat, angry, confuse, heart, think]`;
 
   try {
     const response = await fetch(url, {
@@ -151,15 +149,19 @@ async function askAI(message) {
 
     const data = await response.json();
 
-    // 404やエラーメッセージが返ってきた場合の詳細ログ
     if (data.error) {
-      console.error("Gemini API Error Detail:", data.error);
-      typeText(`エラー: ${data.error.message}`);
+      console.error("Gemini API Error:", data.error);
+      // モデルが見つからないと言われたら gemini-pro を試すための案内
+      if (data.error.code === 404) {
+        typeText("ごめん、モデルの設定がうまくいってないみたい。URLのモデル名を 'gemini-pro' に変えてみて。");
+      } else {
+        typeText("エラーが起きたよ: " + data.error.message);
+      }
       return;
     }
 
     if (!data.candidates || !data.candidates[0].content) {
-      typeText("……？（返答が空です）");
+      typeText("……？（返事が届かなかったよ）");
       return;
     }
 
@@ -168,8 +170,8 @@ async function askAI(message) {
     const aiFace = faceMatch ? faceMatch[1].trim() : "default";
     const cleanText = rawText.replace(/\{face:.*?\}/, "").trim();
 
-    if (cleanText.match(/好き|嬉しい|楽しい|ありがとう/)) relationship++;
-    if (cleanText.match(/嫌い|ひどい|最低|うざい/)) relationship--;
+    if (cleanText.match(/好き|嬉しい|楽しい|ありがとう|すごい/)) relationship++;
+    if (cleanText.match(/嫌い|ひどい|最低|おもんない|うざ/)) relationship--;
     
     setFace(aiFace);
     updateAffectionBar();
@@ -180,7 +182,7 @@ async function askAI(message) {
     updateLimitDisplay();
 
   } catch (e) {
-    typeText("接続エラーが起きたよ。コンソールを確認してね。");
+    typeText("接続に失敗したみたい。ネット環境を確認してみてね。");
     console.error("Fetch Error:", e);
   }
 }
@@ -237,7 +239,7 @@ function startGame(){
   checkLimit();
   updateAffectionBar();
   setFace("default");
-  typeText("久しぶり！今日は何してたの？");
+  typeText("久しぶり！今日はどんな感じ？");
 }
 </script>
 </body>
